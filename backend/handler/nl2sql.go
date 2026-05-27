@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/bxf1/ERP/backend/internal/errors"
+	"github.com/bxf1/ERP/backend/internal/response"
 )
 
 type NL2SQLRequest struct {
@@ -36,13 +37,11 @@ var history []HistoryItem
 func NL2SQLQuery(c *gin.Context) {
 	var req NL2SQLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid request"})
+		response.Error(c, errors.BadRequest("invalid request"))
 		return
 	}
 
 	start := time.Now()
-
-	// Mock: generate a SQL based on keyword matching
 	sql, result := mockQuery(req.Query)
 	elapsed := time.Since(start).Milliseconds()
 
@@ -60,22 +59,14 @@ func NL2SQLQuery(c *gin.Context) {
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "ok",
-		"data":    resp,
-	})
+	response.OK(c, resp)
 }
 
 func NL2SQLHistory(c *gin.Context) {
 	if history == nil {
 		history = []HistoryItem{}
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "ok",
-		"data":    history,
-	})
+	response.OK(c, history)
 }
 
 func mockQuery(query string) (string, QueryResult) {

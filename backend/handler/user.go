@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/bxf1/ERP/backend/pkg/response"
+	"github.com/bxf1/ERP/backend/internal/response"
 )
 
 type UserHandler struct{}
 
 func ListUsers(c *gin.Context) {
-	response.Success(c, gin.H{"users": []interface{}{}})
+	response.OK(c, gin.H{"users": []interface{}{}})
 }
 
 func GetUser(c *gin.Context) {
-	response.Success(c, gin.H{"user": nil})
+	response.OK(c, gin.H{"user": nil})
 }
 
 func CreateUser(c *gin.Context) {
@@ -22,7 +22,7 @@ func CreateUser(c *gin.Context) {
 }
 
 func UpdateUser(c *gin.Context) {
-	response.Success(c, nil)
+	response.OK(c, nil)
 }
 
 func DeleteUser(c *gin.Context) {

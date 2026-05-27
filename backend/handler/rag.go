@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/bxf1/ERP/backend/pkg/response"
+	"github.com/bxf1/ERP/backend/internal/response"
+	"github.com/bxf1/ERP/backend/internal/errors"
 	"github.com/bxf1/ERP/backend/service"
 )
 
@@ -26,7 +27,7 @@ type ingestDocRequest struct {
 func (h *RAGHandler) IngestDocument(c *gin.Context) {
 	var req ingestDocRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -35,7 +36,7 @@ func (h *RAGHandler) IngestDocument(c *gin.Context) {
 		Content: req.Content,
 		Source:  req.Source,
 	}); err != nil {
-		response.InternalError(c, err.Error())
+		response.Error(c, errors.Internal(err.Error()))
 		return
 	}
 
@@ -51,7 +52,7 @@ type ingestQARequest struct {
 func (h *RAGHandler) IngestQA(c *gin.Context) {
 	var req ingestQARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -60,7 +61,7 @@ func (h *RAGHandler) IngestQA(c *gin.Context) {
 		Answer:   req.Answer,
 		Category: req.Category,
 	}); err != nil {
-		response.InternalError(c, err.Error())
+		response.Error(c, errors.Internal(err.Error()))
 		return
 	}
 
@@ -74,17 +75,17 @@ type searchRequest struct {
 func (h *RAGHandler) Search(c *gin.Context) {
 	var req searchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, errors.BadRequest(err.Error()))
 		return
 	}
 
 	result, err := h.svc.Search(c.Request.Context(), req.Query)
 	if err != nil {
-		response.InternalError(c, err.Error())
+		response.Error(c, errors.Internal(err.Error()))
 		return
 	}
 
-	response.Success(c, gin.H{
+	response.OK(c, gin.H{
 		"documents": result.Docs,
 		"qas":       result.QAs,
 		"context":   h.svc.BuildContext(result),
@@ -95,7 +96,7 @@ func (h *RAGHandler) Stats(c *gin.Context) {
 	docCount, _ := h.svc.GetDocCount()
 	qaCount, _ := h.svc.GetQACount()
 
-	response.Success(c, gin.H{
+	response.OK(c, gin.H{
 		"document_count": docCount,
 		"qa_count":       qaCount,
 	})
@@ -105,12 +106,12 @@ func (h *RAGHandler) DeleteDocument(c *gin.Context) {
 	id := c.Param("id")
 	var docID uint
 	if _, err := fmt.Sscanf(id, "%d", &docID); err != nil {
-		response.BadRequest(c, "invalid id")
+		response.Error(c, errors.BadRequest("invalid id"))
 		return
 	}
 
 	if err := h.svc.DeleteDocument(docID); err != nil {
-		response.InternalError(c, err.Error())
+		response.Error(c, errors.Internal(err.Error()))
 		return
 	}
 
@@ -121,12 +122,12 @@ func (h *RAGHandler) DeleteQA(c *gin.Context) {
 	id := c.Param("id")
 	var qaID uint
 	if _, err := fmt.Sscanf(id, "%d", &qaID); err != nil {
-		response.BadRequest(c, "invalid id")
+		response.Error(c, errors.BadRequest("invalid id"))
 		return
 	}
 
 	if err := h.svc.DeleteQA(qaID); err != nil {
-		response.InternalError(c, err.Error())
+		response.Error(c, errors.Internal(err.Error()))
 		return
 	}
 
