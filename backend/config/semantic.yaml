@@ -1,0 +1,259 @@
+version: "1.0"
+
+models:
+  - name: sales
+    label: "销售分析"
+    description: "销售订单相关的业务指标与维度"
+    metrics:
+      - name: total_sales_amount
+        label: "销售总额"
+        description: "所有已确认订单的总金额"
+        kind: sum
+        table: sales_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [revenue, core]
+
+      - name: total_order_count
+        label: "订单总数"
+        description: "已确认状态的订单数量"
+        kind: count
+        table: sales_orders
+        column: id
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [volume, core]
+
+      - name: avg_order_amount
+        label: "平均订单金额"
+        description: "已确认订单的平均金额"
+        kind: avg
+        table: sales_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [revenue, core]
+
+      - name: sales_by_customer
+        label: "客户销售额"
+        description: "按客户分组的销售总额"
+        kind: sum
+        table: sales_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        group_by: [customer_id]
+        joins:
+          - table: customers
+            alias: c
+            on: "sales_orders.customer_id = c.id"
+            join_type: LEFT
+        tags: [revenue, customer]
+
+    dimensions:
+      - name: order_date
+        label: "订单日期"
+        table: sales_orders
+        column: order_date
+        description: "订单创建日期"
+
+      - name: customer_name
+        label: "客户名称"
+        table: customers
+        column: name
+        description: "客户公司全称"
+
+      - name: product_category
+        label: "产品分类"
+        table: products
+        column: category
+        description: "产品所属分类"
+
+      - name: sales_region
+        label: "销售区域"
+        table: customers
+        column: region
+        description: "客户所在区域"
+
+  - name: inventory
+    label: "库存分析"
+    description: "库存管理相关的业务指标与维度"
+    metrics:
+      - name: total_stock_value
+        label: "库存总值"
+        description: "当前库存的总价值（数量 × 成本单价）"
+        kind: sum
+        table: inventory_items
+        column: quantity
+        tags: [asset, core]
+        # Note: this is a simplified metric. In practice you'd use
+        # quantity * unit_cost via a computed column or expression.
+
+      - name: low_stock_count
+        label: "低库存商品数"
+        description: "当前库存低于安全库存水平的商品数量"
+        kind: count
+        table: inventory_items
+        column: id
+        filters:
+          - column: quantity
+            operator: "<"
+            value: "safe_stock_level"
+        tags: [alert, operations]
+
+      - name: stock_by_warehouse
+        label: "仓库库存分布"
+        description: "按仓库分组的库存总量"
+        kind: sum
+        table: inventory_items
+        column: quantity
+        group_by: [warehouse_id]
+        joins:
+          - table: warehouses
+            alias: w
+            on: "inventory_items.warehouse_id = w.id"
+            join_type: LEFT
+        tags: [operations, warehouse]
+
+    dimensions:
+      - name: product_name
+        label: "商品名称"
+        table: products
+        column: name
+
+      - name: warehouse_name
+        label: "仓库名称"
+        table: warehouses
+        column: name
+
+      - name: stock_date
+        label: "入库日期"
+        table: inventory_items
+        column: created_at
+
+  - name: procurement
+    label: "采购分析"
+    description: "采购订单相关的业务指标与维度"
+    metrics:
+      - name: total_purchase_amount
+        label: "采购总额"
+        description: "所有已确认采购订单的总金额"
+        kind: sum
+        table: purchase_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [cost, core]
+
+      - name: pending_order_count
+        label: "待处理采购单"
+        description: "待审批和待处理的采购订单数"
+        kind: count
+        table: purchase_orders
+        column: id
+        filters:
+          - column: status
+            operator: "IN"
+            value: "pending,approval"
+        tags: [operations]
+
+      - name: purchase_by_supplier
+        label: "供应商采购额"
+        description: "按供应商分组的采购总额"
+        kind: sum
+        table: purchase_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        group_by: [supplier_id]
+        joins:
+          - table: suppliers
+            alias: s
+            on: "purchase_orders.supplier_id = s.id"
+            join_type: LEFT
+        tags: [cost, supplier]
+
+    dimensions:
+      - name: supplier_name
+        label: "供应商名称"
+        table: suppliers
+        column: name
+
+      - name: purchase_date
+        label: "采购日期"
+        table: purchase_orders
+        column: order_date
+
+      - name: purchase_status
+        label: "采购状态"
+        table: purchase_orders
+        column: status
+        description: "draft / pending / confirmed / received / cancelled"
+
+  - name: finance
+    label: "财务分析"
+    description: "财务相关的业务指标与维度"
+    metrics:
+      - name: total_revenue
+        label: "总收入"
+        description: "所有已确认销售订单的收入总额"
+        kind: sum
+        table: sales_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [finance, core]
+
+      - name: total_cost
+        label: "总成本"
+        description: "所有已完成采购订单的成本总额"
+        kind: sum
+        table: purchase_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [finance, core]
+
+      - name: gross_profit
+        label: "毛利润"
+        description: "总收入 - 总成本"
+        kind: sum
+        table: sales_orders
+        column: amount
+        filters:
+          - column: status
+            operator: "="
+            value: confirmed
+        tags: [finance, core]
+        # Note: gross_profit requires multi-metric computation (revenue - cost)
+        # This simplified version shows revenue only; full implementation would
+        # use a calculated metric type.
+
+    dimensions:
+      - name: fiscal_period
+        label: "财务期间"
+        table: sales_orders
+        column: order_date
+        description: "按月份汇总的财务周期"
+
+      - name: department
+        label: "部门"
+        table: cost_centers
+        column: name

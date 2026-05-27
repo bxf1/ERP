@@ -1,0 +1,26 @@
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: ""
+  dbname: erp
+  sslmode: disable
+
+jwt:
+  secret: "change-me-in-production"
+  expire: 24
+
+embedding:
+  provider: "openai"
+  apikey: ""
+  baseurl: "https://api.openai.com/v1"
+  model: "text-embedding-ada-002"
+
+rag:
+  topk: 5
+  chunksize: 500
+  chunkoverlap: 50
