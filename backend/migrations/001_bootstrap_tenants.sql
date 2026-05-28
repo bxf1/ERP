@@ -141,7 +141,7 @@ BEGIN
         CREATE TABLE IF NOT EXISTS %I.roles (
             id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name        VARCHAR(200) NOT NULL,
-            key         VARCHAR(200) NOT NULL UNIQUE,
+            code         VARCHAR(200) NOT NULL UNIQUE,
             description TEXT,
             is_system   BOOLEAN      NOT NULL DEFAULT false,
             created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -156,7 +156,7 @@ BEGIN
         CREATE TABLE IF NOT EXISTS %I.permissions (
             id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name        VARCHAR(200) NOT NULL,
-            key         VARCHAR(200) NOT NULL UNIQUE,
+            code         VARCHAR(200) NOT NULL UNIQUE,
             description TEXT,
             resource    VARCHAR(200) NOT NULL,
             action      VARCHAR(100) NOT NULL,
@@ -195,19 +195,19 @@ BEGIN
     -- SEED: default admin role & permission for new tenant
     -- =========================================================================
     EXECUTE format($f$
-        INSERT INTO %I.roles (name, key, description, is_system) VALUES
+        INSERT INTO %I.roles (name, code, description, is_system) VALUES
             ('管理员', 'admin', 'Tenant administrator with full access', true),
             ('普通用户', 'user', 'Regular user', true)
-        ON CONFLICT (key) DO NOTHING;
+        ON CONFLICT (code) DO NOTHING;
 
-        INSERT INTO %I.permissions (name, key, resource, action) VALUES
+        INSERT INTO %I.permissions (name, code, resource, action) VALUES
             ('全部管理权限', 'admin.full_access', '*', '*')
-        ON CONFLICT (key) DO NOTHING;
+        ON CONFLICT (code) DO NOTHING;
 
         INSERT INTO %I.role_permissions (role_id, permission_id)
         SELECT r.id, p.id
         FROM %I.roles r, %I.permissions p
-        WHERE r.key = 'admin' AND p.key = 'admin.full_access'
+        WHERE r.code = 'admin' AND p.code = 'admin.full_access'
         ON CONFLICT DO NOTHING;
     $f$, _schema, _schema, _schema, _schema, _schema);
 
