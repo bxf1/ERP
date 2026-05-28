@@ -68,7 +68,7 @@ type Menu struct {
 type Role struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Key         string    `json:"key"`
+	Code        string    `json:"code"`
 	Description *string   `json:"description,omitempty"`
 	IsSystem    bool      `json:"is_system"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -79,7 +79,7 @@ type Role struct {
 type Permission struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Key         string    `json:"key"`
+	Code        string    `json:"code"`
 	Description *string   `json:"description,omitempty"`
 	Resource    string    `json:"resource"`
 	Action      string    `json:"action"`
