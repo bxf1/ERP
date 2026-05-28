@@ -81,6 +81,15 @@ ERP/
 - **Go import 路径**：各模块原 module path 不同，整合后的 import 路径需统一修正
 - **前端路由合并**：App.tsx 和 routes.tsx 需要合并所有页面的路由配置
 
+## 开发工作流
+
+1. 从 `main` 创建 feature 分支：`git checkout -b feature/<描述>`
+2. 开发完成后 push 分支：`git push origin feature/<描述>`
+3. 创建 Pull Request（PR 描述中引用 Multica issue）
+4. Code review 通过后合并到 `main`
+
+所有改动必须经过 PR 流程，不直接 push 到 main。
+
 ## 快速开始
 
 ```bash
