@@ -2,6 +2,7 @@ package router
 
 import (
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/bxf1/ERP/backend/config"
@@ -9,6 +10,9 @@ import (
 	"github.com/bxf1/ERP/backend/internal/middleware"
 	"github.com/bxf1/ERP/backend/pkg/database"
 	"github.com/bxf1/ERP/backend/pkg/embedding"
+	permcache "github.com/bxf1/ERP/backend/pkg/permission/cache"
+	permhandlers "github.com/bxf1/ERP/backend/pkg/permission/handlers"
+	permservices "github.com/bxf1/ERP/backend/pkg/permission/services"
 	"github.com/bxf1/ERP/backend/repository"
 	"github.com/bxf1/ERP/backend/service"
 	"go.uber.org/zap"
@@ -48,6 +52,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	}
 
 	setupRAG(r, db, cfg)
+	setupPermissions(r, db, cfg)
 
 	return r
 }
@@ -94,5 +99,47 @@ func setupRAG(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		knowledge.GET("/stats", ragHandler.Stats)
 		knowledge.DELETE("/documents/:id", ragHandler.DeleteDocument)
 		knowledge.DELETE("/qa/:id", ragHandler.DeleteQA)
+	}
+}
+
+func setupPermissions(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+	permCache, err := permcache.NewPermissionCache(cfg.Redis.URL, 5*time.Minute)
+	if err != nil {
+		log.Printf("WARNING: permission cache init failed (redis may be unavailable): %v", err)
+		return
+	}
+
+	rbacSvc := permservices.NewRBACService(db, permCache)
+	roleHandler := permhandlers.NewRoleHandler(db, rbacSvc)
+	permHandler := permhandlers.NewPermissionHandler(db, rbacSvc)
+	userRoleHandler := permhandlers.NewUserRoleHandler(db, rbacSvc)
+
+	api := r.Group("/api/v1")
+	{
+		roles := api.Group("/roles")
+		{
+			roles.GET("", roleHandler.ListRoles)
+			roles.GET("/:id", roleHandler.GetRole)
+			roles.POST("", roleHandler.CreateRole)
+			roles.PUT("/:id", roleHandler.UpdateRole)
+			roles.DELETE("/:id", roleHandler.DeleteRole)
+			roles.POST("/:id/permissions", roleHandler.AssignPermissions)
+			roles.POST("/:id/data-scope", roleHandler.SetDataScope)
+		}
+
+		permissions := api.Group("/permissions")
+		{
+			permissions.GET("", permHandler.ListPermissions)
+			permissions.GET("/flat", permHandler.ListPermissionsFlat)
+			permissions.POST("", permHandler.CreatePermission)
+			permissions.PUT("/:id", permHandler.UpdatePermission)
+			permissions.DELETE("/:id", permHandler.DeletePermission)
+		}
+
+		api.GET("/roles/available", userRoleHandler.ListAllRoles)
+		api.GET("/users/:userId/roles", userRoleHandler.GetUserRoles)
+		api.GET("/users/:userId/permissions", userRoleHandler.GetUserPermissions)
+		api.POST("/users/:userId/roles", userRoleHandler.AssignRole)
+		api.DELETE("/users/:userId/roles/:roleId", userRoleHandler.RemoveRole)
 	}
 }

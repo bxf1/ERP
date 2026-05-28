@@ -8,6 +8,8 @@ import {
   DashboardOutlined,
   UserOutlined,
   SettingOutlined,
+  SafetyOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 
 const defaultMenus = [
@@ -20,6 +22,16 @@ const defaultMenus = [
     path: '/users',
     name: '用户管理',
     icon: <UserOutlined />,
+  },
+  {
+    path: '/roles',
+    name: '角色管理',
+    icon: <SafetyOutlined />,
+  },
+  {
+    path: '/permissions',
+    name: '权限管理',
+    icon: <KeyOutlined />,
   },
   {
     path: '/settings',

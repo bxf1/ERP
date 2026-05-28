@@ -16,10 +16,15 @@ type LogConfig struct {
 type Config struct {
 	Server    ServerConfig
 	Database  DatabaseConfig
+	Redis     RedisConfig
 	JWT       JWTConfig
 	Embedding EmbeddingConfig
 	RAG       RAGConfig
 	Log       LogConfig
+}
+
+type RedisConfig struct {
+	URL string
 }
 
 type ServerConfig struct {
@@ -101,6 +106,7 @@ func setDefaults() {
 	viper.SetDefault("rag.topk", 5)
 	viper.SetDefault("rag.chunksize", 500)
 	viper.SetDefault("rag.chunkoverlap", 50)
+	viper.SetDefault("redis.url", "redis://localhost:6379/0")
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "console")
 }

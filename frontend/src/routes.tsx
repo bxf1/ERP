@@ -14,6 +14,14 @@ const routes: RouteObject[] = [
         path: 'users',
         lazy: () => import('./pages/User/List'),
       },
+      {
+        path: 'roles',
+        lazy: () => import('./pages/permission/RoleList'),
+      },
+      {
+        path: 'permissions',
+        lazy: () => import('./pages/permission/PermissionList'),
+      },
     ],
   },
 ];
