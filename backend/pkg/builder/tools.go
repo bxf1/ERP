@@ -200,7 +200,6 @@ func (e *MockToolExecutor) updateModel(args map[string]interface{}) (json.RawMes
 		existing.Fields = append(existing.Fields, f)
 	}
 
-	existing.UpdatedAt = "" // would be set by the engine
 	e.models[name] = existing
 	return json.Marshal(map[string]string{"status": "updated", "model": name})
 }

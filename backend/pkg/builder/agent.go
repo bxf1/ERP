@@ -170,7 +170,7 @@ func (a *Agent) handleSolution(ctx context.Context, session *Conversation) (*Bui
 		errs := a.val.ValidateAll(session.ProposedConfigs)
 		msg := FormatValidationErrors(errs)
 		if len(errs) == 0 || onlyWarnings(errs) {
-			msg += "\n\n如确认无误，请回复"确认创建"以执行创建操作。如需修改，请说明调整内容。"
+			msg += "\n\n如确认无误，请回复「确认创建」以执行创建操作。如需修改，请说明调整内容。"
 		}
 		if err := a.cm.AddMessage(session.SessionID, "assistant", msg); err != nil {
 			return nil, err
@@ -325,6 +325,9 @@ func lastUserMessage(session *Conversation) Message {
 }
 
 func isAffirmative(content string) bool {
+	if len(content) >= len("确认创建") && content[:len("确认创建")] == "确认创建" {
+		return true
+	}
 	affirmatives := []string{"确认", "是的", "好的", "可以", "没问题", "同意", "创建", "ok", "yes", "对", "行", "好"}
 	content = normalizeForMatch(content)
 	for _, a := range affirmatives {

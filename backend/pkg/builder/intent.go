@@ -134,49 +134,60 @@ func extractDescription(msg string) string {
 func extractFields(msg string, existingModels []ModelSummary) []FieldConfig {
 	var fields []FieldConfig
 
-	// Pattern: "字段名：类型" or "字段名（类型）"
-	// Example: "客户名称：string", "联系电话：string", "地址：text"
+	// Pattern 1: "字段名：类型" or "字段名:类型"
 	fieldRe := regexp.MustCompile(`[\p{Han}]{2,6}(?:名称|编号|编码|地址|电话|手机|邮箱|日期|时间|金额|数量|价格|状态|类型|描述|备注)[：:]\s*([a-zA-Z]+)`)
 	matches := fieldRe.FindAllStringSubmatch(msg, -1)
-	if len(matches) > 0 {
-		seen := make(map[string]bool)
-		for _, m := range matches {
-			full := m[0]
-			typeStr := m[1]
-			// Extract field name part (before colon).
-			parts := strings.SplitN(full, "：", 2)
-			if len(parts) != 2 {
-				parts = strings.SplitN(full, ":", 2)
-			}
-			if len(parts) != 2 {
-				continue
-			}
-			displayName := strings.TrimSpace(parts[0])
-			name := normalizeModelName(displayName)
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-
-			ft := parseFieldType(typeStr)
-			f := FieldConfig{
-				Name:        name,
-				DisplayName: displayName,
-				Type:        ft,
-				Required:    strings.Contains(msg, "必填") || strings.Contains(msg, "必输"),
-			}
-			fields = append(fields, f)
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		full := m[0]
+		typeStr := m[1]
+		parts := strings.SplitN(full, "：", 2)
+		if len(parts) != 2 {
+			parts = strings.SplitN(full, ":", 2)
 		}
+		if len(parts) != 2 {
+			continue
+		}
+		displayName := strings.TrimSpace(parts[0])
+		name := normalizeModelName(displayName)
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		ft := parseFieldType(typeStr)
+		f := FieldConfig{
+			Name:        name,
+			DisplayName: displayName,
+			Type:        ft,
+			Required:    strings.Contains(msg, "必填") || strings.Contains(msg, "必输"),
+		}
+		fields = append(fields, f)
 	}
 
-	// Pattern: list-style " - 字段名 (类型, 约束)"
+	// Pattern 2: "字段名(类型, ...)" — e.g. "客户名称(string)" or "订单编号(string, 必填, 唯一)"
+	parenRe := regexp.MustCompile(`([\p{Han}]{2,6})[（(]\s*([a-zA-Z]+)[^）)]*[）)]`)
+	parenMatches := parenRe.FindAllStringSubmatch(msg, -1)
+	for _, m := range parenMatches {
+		displayName := strings.TrimSpace(m[1])
+		typeStr := strings.TrimSpace(m[2])
+		name := normalizeModelName(displayName)
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		ft := parseFieldType(typeStr)
+		fields = append(fields, FieldConfig{
+			Name:        name,
+			DisplayName: displayName,
+			Type:        ft,
+			Required:    strings.Contains(msg, "必填") || strings.Contains(msg, "必输"),
+		})
+	}
+
+	// Pattern 3: list-style " - 字段名 (类型, 约束)"
 	listRe := regexp.MustCompile(`[-*]\s*([\p{Han}a-zA-Z]{2,10})[：:（(]\s*([\p{Han}a-zA-Z]+)`)
 	listMatches := listRe.FindAllStringSubmatch(msg, -1)
-	if len(listMatches) > len(fields) {
-		seen := make(map[string]bool)
-		for _, f := range fields {
-			seen[f.Name] = true
-		}
+	if len(listMatches) > 0 {
 		for _, m := range listMatches {
 			displayName := strings.TrimSpace(m[1])
 			name := normalizeModelName(displayName)
