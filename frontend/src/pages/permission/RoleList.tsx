@@ -44,6 +44,7 @@ export default function RoleList() {
   const [allPerms, setAllPerms] = useState<Permission[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const [permLoading, setPermLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
 
   const columns: ProColumns<Role>[] = [
@@ -168,6 +169,7 @@ export default function RoleList() {
         title={editingRecord ? '编辑角色' : '新增角色'}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={confirmLoading}
         onOk={() => form.submit()}
         destroyOnClose
         width={520}
@@ -176,15 +178,20 @@ export default function RoleList() {
           form={form}
           layout="vertical"
           onFinish={async (values) => {
-            if (editingRecord) {
-              await updateRole(editingRecord.id, values);
-              message.success('更新成功');
-            } else {
-              await createRole(values);
-              message.success('创建成功');
+            setConfirmLoading(true);
+            try {
+              if (editingRecord) {
+                await updateRole(editingRecord.id, values);
+                message.success('更新成功');
+              } else {
+                await createRole(values);
+                message.success('创建成功');
+              }
+              setModalOpen(false);
+              actionRef.current?.reload();
+            } finally {
+              setConfirmLoading(false);
             }
-            setModalOpen(false);
-            actionRef.current?.reload();
           }}
         >
           <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>

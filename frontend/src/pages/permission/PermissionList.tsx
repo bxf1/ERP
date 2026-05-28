@@ -20,12 +20,17 @@ function buildTreeSelectData(perms: Permission[]): any[] {
   }));
 }
 
+const ACTION_COLORS: Record<string, string> = {
+  read: 'blue', create: 'green', update: 'orange', delete: 'red', manage: 'purple', export: 'cyan', approve: 'magenta',
+};
+
 export default function PermissionList() {
   const actionRef = useRef<ActionType>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Permission | null>(null);
   const [treeData, setTreeData] = useState<any[]>([]);
   const [tabKey, setTabKey] = useState<string>('flat');
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
 
   const loadTreeData = async () => {
@@ -38,10 +43,9 @@ export default function PermissionList() {
     { title: '权限编码', dataIndex: 'code', width: 160, copyable: true },
     { title: '资源', dataIndex: 'resource', width: 120 },
     { title: '操作', dataIndex: 'action', width: 100,
-      render: (_, record) => {
-        const colors: Record<string, string> = { read: 'blue', create: 'green', update: 'orange', delete: 'red', manage: 'purple' };
-        return <Tag color={colors[record.action] || 'default'}>{record.action}</Tag>;
-      },
+      render: (_, record) => (
+        <Tag color={ACTION_COLORS[record.action] || 'default'}>{record.action}</Tag>
+      ),
     },
     { title: '描述', dataIndex: 'description', ellipsis: true },
     { title: '排序', dataIndex: 'sort_order', width: 80 },
@@ -118,6 +122,7 @@ export default function PermissionList() {
         title={editingRecord ? '编辑权限' : '新增权限'}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={confirmLoading}
         onOk={() => form.submit()}
         destroyOnClose
         width={560}
@@ -126,15 +131,20 @@ export default function PermissionList() {
           form={form}
           layout="vertical"
           onFinish={async (values) => {
-            if (editingRecord) {
-              await updatePermission(editingRecord.id, values);
-              message.success('更新成功');
-            } else {
-              await createPermission(values);
-              message.success('创建成功');
+            setConfirmLoading(true);
+            try {
+              if (editingRecord) {
+                await updatePermission(editingRecord.id, values);
+                message.success('更新成功');
+              } else {
+                await createPermission(values);
+                message.success('创建成功');
+              }
+              setModalOpen(false);
+              actionRef.current?.reload();
+            } finally {
+              setConfirmLoading(false);
             }
-            setModalOpen(false);
-            actionRef.current?.reload();
           }}
         >
           <Form.Item name="name" label="权限名称" rules={[{ required: true }]}>
