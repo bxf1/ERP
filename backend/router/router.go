@@ -48,6 +48,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	}
 
 	setupRAG(r, db, cfg)
+	setupWorkflow(r, db)
 
 	return r
 }
@@ -94,5 +95,57 @@ func setupRAG(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		knowledge.GET("/stats", ragHandler.Stats)
 		knowledge.DELETE("/documents/:id", ragHandler.DeleteDocument)
 		knowledge.DELETE("/qa/:id", ragHandler.DeleteQA)
+	}
+}
+
+func setupWorkflow(r *gin.Engine, db *gorm.DB) {
+	wfRepo := repository.NewWorkflowRepository(db)
+	wfSvc := service.NewWorkflowService(db, wfRepo)
+	wfHandler := handler.NewWorkflowHandler(wfSvc)
+
+	wf := r.Group("/api/v1/workflow")
+	{
+		// Definitions
+		defs := wf.Group("/definitions")
+		{
+			defs.GET("", wfHandler.ListDefinitions)
+			defs.POST("", wfHandler.CreateDefinition)
+			defs.GET("/:id", wfHandler.GetDefinition)
+			defs.PUT("/:id", wfHandler.UpdateDefinition)
+			defs.DELETE("/:id", wfHandler.DeleteDefinition)
+
+			// Nodes under a definition
+			defs.POST("/:id/nodes", wfHandler.CreateNode)
+		}
+
+		// Nodes (independent routes)
+		nodes := wf.Group("/nodes")
+		{
+			nodes.PUT("/:id", wfHandler.UpdateNode)
+			nodes.DELETE("/:id", wfHandler.DeleteNode)
+		}
+
+		// Edges
+		edges := wf.Group("/edges")
+		{
+			edges.PUT("/:id", wfHandler.UpdateEdge)
+			edges.DELETE("/:id", wfHandler.DeleteEdge)
+		}
+
+		// Edges under a definition
+		defs.POST("/:id/edges", wfHandler.CreateEdge)
+
+		// Instances
+		instances := wf.Group("/instances")
+		{
+			instances.GET("", wfHandler.ListInstances)
+			instances.POST("", wfHandler.StartInstance)
+			instances.GET("/:id", wfHandler.GetInstance)
+			instances.POST("/:id/approve", wfHandler.ApproveInstance)
+			instances.POST("/:id/reject", wfHandler.RejectInstance)
+			instances.POST("/:id/transfer", wfHandler.TransferInstance)
+			instances.POST("/:id/add-signer", wfHandler.AddSigner)
+			instances.POST("/:id/cancel", wfHandler.CancelInstance)
+		}
 	}
 }
