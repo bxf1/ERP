@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/bxf1/ERP/backend/config"
 	"github.com/bxf1/ERP/backend/handler"
+	intdb "github.com/bxf1/ERP/backend/internal/database"
 	"github.com/bxf1/ERP/backend/internal/middleware"
 	"github.com/bxf1/ERP/backend/pkg/database"
 	"github.com/bxf1/ERP/backend/pkg/embedding"
@@ -27,6 +28,17 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r.Use(middleware.Logger(logger))
 	r.Use(middleware.CORS())
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("failed to get sql.DB from gorm: %v", err)
+	}
+	tenantResolver := intdb.NewTenantResolver(sqlDB, cfg.Database)
+	tenantMW := middleware.Tenant(middleware.TenantConfig{
+		Resolver:      tenantResolver,
+		HeaderName:    "X-Tenant",
+		UsePathPrefix: false,
+	})
+
 	api := r.Group("/api/v1")
 	{
 		api.GET("/health", handler.Health)
@@ -44,6 +56,64 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		{
 			nl2sql.POST("/query", handler.NL2SQLQuery)
 			nl2sql.GET("/history", handler.NL2SQLHistory)
+		}
+
+		// Inventory / ERP business routes — all tenant-isolated
+		biz := api.Group("")
+		biz.Use(tenantMW)
+		{
+			suppliers := biz.Group("/suppliers")
+			{
+				suppliers.GET("", handler.ListSuppliers)
+				suppliers.GET("/:id", handler.GetSupplier)
+				suppliers.POST("", handler.CreateSupplier)
+				suppliers.PUT("/:id", handler.UpdateSupplier)
+			}
+
+			customers := biz.Group("/customers")
+			{
+				customers.GET("", handler.ListCustomers)
+				customers.GET("/:id", handler.GetCustomer)
+				customers.POST("", handler.CreateCustomer)
+				customers.PUT("/:id", handler.UpdateCustomer)
+			}
+
+			purchaseOrders := biz.Group("/purchase-orders")
+			{
+				purchaseOrders.GET("", handler.ListPurchaseOrders)
+				purchaseOrders.GET("/:id", handler.GetPurchaseOrder)
+				purchaseOrders.POST("", handler.CreatePurchaseOrder)
+				purchaseOrders.PUT("/:id", handler.UpdatePurchaseOrder)
+				purchaseOrders.POST("/:id/submit", handler.SubmitPurchaseOrder)
+				purchaseOrders.POST("/:id/approve", handler.ApprovePurchaseOrder)
+				purchaseOrders.POST("/:id/receive", handler.ReceivePurchaseOrder)
+			}
+
+			salesOrders := biz.Group("/sales-orders")
+			{
+				salesOrders.GET("", handler.ListSalesOrders)
+				salesOrders.GET("/:id", handler.GetSalesOrder)
+				salesOrders.POST("", handler.CreateSalesOrder)
+				salesOrders.PUT("/:id", handler.UpdateSalesOrder)
+				salesOrders.POST("/:id/confirm", handler.ConfirmSalesOrder)
+				salesOrders.POST("/:id/ship", handler.ShipSalesOrder)
+				salesOrders.POST("/:id/invoice", handler.InvoiceSalesOrder)
+			}
+
+			inventory := biz.Group("/inventory")
+			{
+				inventory.GET("", handler.ListInventory)
+				inventory.GET("/alerts", handler.GetLowStockAlerts)
+			}
+
+			stocktaking := biz.Group("/stocktaking")
+			{
+				stocktaking.GET("", handler.ListStocktaking)
+				stocktaking.GET("/:id", handler.GetStocktaking)
+				stocktaking.POST("", handler.CreateStocktaking)
+			}
+
+			biz.GET("/dashboard", handler.GetDashboard)
 		}
 	}
 
