@@ -1,11 +1,17 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
 	"github.com/spf13/viper"
 )
+
+type LogConfig struct {
+	Level  string
+	Format string
+}
 
 type Config struct {
 	Server    ServerConfig
@@ -13,6 +19,7 @@ type Config struct {
 	JWT       JWTConfig
 	Embedding EmbeddingConfig
 	RAG       RAGConfig
+	Log       LogConfig
 }
 
 type ServerConfig struct {
@@ -27,6 +34,11 @@ type DatabaseConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+func (d DatabaseConfig) DSN() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		d.Host, d.Port, d.User, d.Password, d.DBName, d.SSLMode)
 }
 
 type JWTConfig struct {
@@ -89,4 +101,6 @@ func setDefaults() {
 	viper.SetDefault("rag.topk", 5)
 	viper.SetDefault("rag.chunksize", 500)
 	viper.SetDefault("rag.chunkoverlap", 50)
+	viper.SetDefault("log.level", "info")
+	viper.SetDefault("log.format", "console")
 }

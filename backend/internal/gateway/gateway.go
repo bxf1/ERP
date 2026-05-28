@@ -133,14 +133,16 @@ func InjectTenantFilter(sql, tenantID string) (string, error) {
 		return "", fmt.Errorf("only SELECT queries are allowed via query_data, got %q", sql)
 	}
 
-	dangerous := []string{
+	dangerousWords := []string{
 		"INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
-		"TRUNCATE", "EXEC", "EXECUTE", "--", "/*",
+		"TRUNCATE", "EXEC", "EXECUTE",
 	}
-	for _, keyword := range dangerous {
-		if strings.Contains(upperSQL, keyword) {
-			return "", fmt.Errorf("SQL contains forbidden keyword: %s", keyword)
-		}
+	wordBoundary := regexp.MustCompile(`\b(` + strings.Join(dangerousWords, "|") + `)\b`)
+	if wordBoundary.MatchString(upperSQL) {
+		return "", fmt.Errorf("SQL contains forbidden keyword: %s", wordBoundary.FindString(upperSQL))
+	}
+	if strings.Contains(upperSQL, "--") || strings.Contains(upperSQL, "/*") {
+		return "", fmt.Errorf("SQL contains forbidden comment syntax")
 	}
 
 	// Inject tenant_id = '<tenantID>' into WHERE clause.

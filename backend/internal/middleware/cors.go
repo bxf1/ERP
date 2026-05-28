@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"time"
-
 	"github.com/gin-gonic/gin"
 )
 
