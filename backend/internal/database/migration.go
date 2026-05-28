@@ -150,6 +150,12 @@ func MigrateTenantSchemas(db *sql.DB, cfg config.DatabaseConfig) error {
 				return fmt.Errorf("install v3 for %s: %w", schemaName, err)
 			}
 		}
+		if appliedVersion < 4 {
+			logger.L.Info("installing tenant tables v4", zap.String("schema", schemaName))
+			if _, err := db.Exec(`SELECT install_tenant_v4_tables($1)`, schemaName); err != nil {
+				return fmt.Errorf("install v4 for %s: %w", schemaName, err)
+			}
+		}
 	}
 
 	return rows.Err()
